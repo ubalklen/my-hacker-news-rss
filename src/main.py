@@ -9,21 +9,25 @@ logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
 )
 
-KEYWORDS = [
-    "GPT",
-    "LLM",
-    "AI",
-    "Machine Learning",
-    "Neural Network",
-    "OpenAI",
-    "Claude",
-    "Gemini",
-    "Llama",
-    "DeepSeek",
-]
 HN_API_BASE = "https://hacker-news.firebaseio.com/v0"
 OUTPUT_DIR = "public"
 OUTPUT_FILE = "feed.xml"
+KEYWORDS_FILE = "keywords.txt"
+
+
+def load_keywords(filepath: str = KEYWORDS_FILE) -> list[str]:
+    """Load keywords from a file, one keyword per line."""
+    try:
+        with open(filepath, "r") as f:
+            keywords = [line.strip() for line in f if line.strip()]
+        logging.info(f"Loaded {len(keywords)} keywords from {filepath}")
+        return keywords
+    except FileNotFoundError:
+        logging.error(f"Keywords file not found: {filepath}")
+        return []
+    except Exception as e:
+        logging.error(f"Error loading keywords from {filepath}: {e}")
+        return []
 
 
 def fetch_top_stories(limit: int = 100) -> list[int]:
@@ -98,10 +102,16 @@ def generate_rss(stories: list[dict], output_path: str):
 
 def main():
     logging.info("Starting HN RSS fetcher...")
+    
+    keywords = load_keywords()
+    if not keywords:
+        logging.error("No keywords loaded. Exiting.")
+        return
+    
     top_ids = fetch_top_stories(limit=100)  # Check top 100 stories
     logging.info(f"Fetched {len(top_ids)} top stories.")
 
-    matching_stories = filter_stories(top_ids, KEYWORDS)
+    matching_stories = filter_stories(top_ids, keywords)
     logging.info(f"Found {len(matching_stories)} matching stories.")
 
     os.makedirs(OUTPUT_DIR, exist_ok=True)

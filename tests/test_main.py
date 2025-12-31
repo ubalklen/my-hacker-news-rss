@@ -1,5 +1,22 @@
-from unittest.mock import patch, MagicMock
-from src.main import filter_stories, fetch_top_stories
+from unittest.mock import patch, MagicMock, mock_open
+from src.main import filter_stories, fetch_top_stories, load_keywords
+
+
+def test_load_keywords():
+    mock_keywords_content = "GPT\nLLM\nAI\n\nMachine Learning\n"
+    with patch("builtins.open", mock_open(read_data=mock_keywords_content)):
+        keywords = load_keywords("keywords.txt")
+        assert len(keywords) == 4
+        assert "GPT" in keywords
+        assert "LLM" in keywords
+        assert "AI" in keywords
+        assert "Machine Learning" in keywords
+
+
+def test_load_keywords_file_not_found():
+    with patch("builtins.open", side_effect=FileNotFoundError):
+        keywords = load_keywords("nonexistent.txt")
+        assert keywords == []
 
 
 def test_filter_stories():
