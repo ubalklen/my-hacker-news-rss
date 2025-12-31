@@ -3,6 +3,7 @@ from feedgen.feed import FeedGenerator
 import os
 from datetime import datetime, timezone
 import logging
+import re
 
 # Configure logging
 logging.basicConfig(
@@ -52,6 +53,17 @@ def fetch_story_details(story_id: int) -> dict | None:
         return None
 
 
+def matches_keyword(text: str, keyword: str) -> bool:
+    """Check if keyword matches as a whole word in text (case-insensitive).
+
+    Uses word boundaries to avoid false positives like 'AI' matching 'airlines'.
+    """
+    # Create a regex pattern with word boundaries
+    # \b matches word boundaries (transition between word and non-word character)
+    pattern = r"\b" + re.escape(keyword) + r"\b"
+    return bool(re.search(pattern, text, re.IGNORECASE))
+
+
 def filter_stories(story_ids: list[int], keywords: list[str]) -> list[dict]:
     """Filter stories based on keywords in the title."""
     filtered_stories = []
@@ -65,7 +77,7 @@ def filter_stories(story_ids: list[int], keywords: list[str]) -> list[dict]:
             story["url"] = f"https://news.ycombinator.com/item?id={story['id']}"
 
         title = story["title"]
-        if any(keyword.lower() in title.lower() for keyword in keywords):
+        if any(matches_keyword(title, keyword) for keyword in keywords):
             filtered_stories.append(story)
             logging.info(f"Found match: {title}")
 
@@ -89,7 +101,7 @@ def generate_rss(stories: list[dict], output_path: str):
         fe.title(story.get("title"))
         fe.link(href=comments_url)
         fe.published(datetime.fromtimestamp(story.get("time"), tz=timezone.utc))
-        
+
         original_url = story.get("url")
         if original_url and original_url != comments_url:
             fe.description(f"Article: {original_url}")
@@ -102,12 +114,12 @@ def generate_rss(stories: list[dict], output_path: str):
 
 def main():
     logging.info("Starting HN RSS fetcher...")
-    
+
     keywords = load_keywords()
     if not keywords:
         logging.error("No keywords loaded. Exiting.")
         return
-    
+
     top_ids = fetch_top_stories(limit=100)  # Check top 100 stories
     logging.info(f"Fetched {len(top_ids)} top stories.")
 
