@@ -12,13 +12,13 @@ This project automatically fetches the top stories from Hacker News, filters the
 - 📰 Generates a clean RSS feed with matched stories
 - ⏰ Updates every 6 hours via GitHub Actions
 - 🌐 Published automatically to GitHub Pages
-- 🔍 Searches for keywords: GPT, LLM, AI, Machine Learning, Neural Network, OpenAI, Claude, Gemini, Llama, DeepSeek
+- 🔍 Searches for keywords: GPT, LLM, AI, Machine Learning, Neural Network, OpenAI, Claude, Gemini, Llama, DeepSeek (see `src/main.py` for the full list)
 
 ## RSS Feed
 
 Subscribe to the feed at: `https://<username>.github.io/hackernews-rss-ai-topics/feed.xml`
 
-Replace `<username>` with the repository owner's GitHub username.
+Replace `<username>` with the repository owner's GitHub username. For example, if the repository is owned by `ubalklen`, the feed URL would be `https://ubalklen.github.io/hackernews-rss-ai-topics/feed.xml`.
 
 ## How It Works
 
