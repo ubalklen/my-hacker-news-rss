@@ -5,6 +5,8 @@ from src.main import (
     load_keywords_from_file,
     load_keywords_from_env,
     matches_keyword,
+    fetch_comment_details,
+    fetch_top_comment,
     main,
 )
 import argparse
@@ -248,3 +250,107 @@ def test_filter_stories_with_false_positives():
         assert filtered[0]["id"] == 1
         assert filtered[1]["id"] == 3
         assert filtered[2]["id"] == 5
+
+
+@patch("src.main.requests.get")
+def test_fetch_comment_details(mock_get):
+    """Test fetching comment details from HN API"""
+    mock_response = MagicMock()
+    mock_response.json.return_value = {
+        "id": 12345,
+        "by": "testuser",
+        "text": "This is a test comment",
+        "time": 1609459200,
+    }
+    mock_get.return_value = mock_response
+
+    comment = fetch_comment_details(12345)
+    assert comment is not None
+    assert comment["id"] == 12345
+    assert comment["text"] == "This is a test comment"
+    assert comment["by"] == "testuser"
+
+
+@patch("src.main.requests.get")
+def test_fetch_comment_details_error(mock_get):
+    """Test handling of errors when fetching comment details"""
+    import requests
+    mock_get.side_effect = requests.RequestException("Network error")
+
+    comment = fetch_comment_details(12345)
+    assert comment is None
+
+
+def test_fetch_top_comment_with_comments():
+    """Test fetching top comment when story has comments"""
+    story = {
+        "id": 1,
+        "title": "Test Story",
+        "kids": [101, 102, 103],
+    }
+
+    mock_comment = {
+        "id": 101,
+        "by": "commenter1",
+        "text": "This is the top comment",
+        "time": 1609459200,
+    }
+
+    with patch("src.main.fetch_comment_details", return_value=mock_comment):
+        top_comment = fetch_top_comment(story)
+        assert top_comment == "This is the top comment"
+
+
+def test_fetch_top_comment_no_comments():
+    """Test fetching top comment when story has no comments"""
+    story = {
+        "id": 1,
+        "title": "Test Story",
+    }
+
+    top_comment = fetch_top_comment(story)
+    assert top_comment is None
+
+
+def test_fetch_top_comment_empty_kids():
+    """Test fetching top comment when story has empty kids array"""
+    story = {
+        "id": 1,
+        "title": "Test Story",
+        "kids": [],
+    }
+
+    top_comment = fetch_top_comment(story)
+    assert top_comment is None
+
+
+def test_fetch_top_comment_comment_fetch_fails():
+    """Test handling when comment fetch fails"""
+    story = {
+        "id": 1,
+        "title": "Test Story",
+        "kids": [101],
+    }
+
+    with patch("src.main.fetch_comment_details", return_value=None):
+        top_comment = fetch_top_comment(story)
+        assert top_comment is None
+
+
+def test_fetch_top_comment_comment_no_text():
+    """Test handling when comment has no text field"""
+    story = {
+        "id": 1,
+        "title": "Test Story",
+        "kids": [101],
+    }
+
+    mock_comment = {
+        "id": 101,
+        "by": "commenter1",
+        "time": 1609459200,
+    }
+
+    with patch("src.main.fetch_comment_details", return_value=mock_comment):
+        top_comment = fetch_top_comment(story)
+        assert top_comment is None

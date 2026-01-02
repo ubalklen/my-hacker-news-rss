@@ -67,6 +67,35 @@ def fetch_story_details(story_id: int) -> dict | None:
         return None
 
 
+def fetch_comment_details(comment_id: int) -> dict | None:
+    """Fetch details for a specific comment."""
+    try:
+        response = requests.get(f"{HN_API_BASE}/item/{comment_id}.json", timeout=5)
+        response.raise_for_status()
+        return response.json()
+    except requests.RequestException as e:
+        logging.error(f"Error fetching comment {comment_id}: {e}")
+        return None
+
+
+def fetch_top_comment(story: dict) -> str | None:
+    """Fetch the top comment text for a story.
+    
+    Returns the text of the first comment if available, None otherwise.
+    """
+    kids = story.get("kids", [])
+    if not kids:
+        return None
+    
+    top_comment_id = kids[0]
+    comment = fetch_comment_details(top_comment_id)
+    
+    if comment and "text" in comment:
+        return comment["text"]
+    
+    return None
+
+
 def matches_keyword(text: str, keyword: str) -> bool:
     """Check if keyword matches as a whole word in text (case-insensitive).
 
@@ -119,11 +148,17 @@ def generate_rss(stories: list[dict], output_path: str):
         fe.link(href=comments_url)
         fe.published(datetime.fromtimestamp(story.get("time"), tz=timezone.utc))
 
-        original_url = story.get("url")
-        if original_url and original_url != comments_url:
-            fe.description(f"Article: {original_url}")
+        # Use top comment as description
+        top_comment = fetch_top_comment(story)
+        if top_comment:
+            fe.description(top_comment)
         else:
-            fe.description(f"Comments: {comments_url}")
+            # Fallback to original behavior if no comment available
+            original_url = story.get("url")
+            if original_url and original_url != comments_url:
+                fe.description(f"Article: {original_url}")
+            else:
+                fe.description(f"Comments: {comments_url}")
 
     fg.rss_file(output_path)
     logging.info(f"RSS feed generated at {output_path}")
